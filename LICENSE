@@ -1,0 +1,101 @@
+AutoResearch Software License
+=============================
+
+Copyright (c) 2026 hawwwlit (https://github.com/hawwwlit).
+All rights reserved.
+
+This repository (the "Software") — including the source code,
+orchestration logic, agent design, prompt templates, and accompanying
+documentation — is the proprietary property of the copyright holder.
+It is published here for inspection and reference purposes only.
+
+
+NO LICENSE GRANTED BY THIS NOTICE
+---------------------------------
+
+This notice does NOT grant any license to run, modify, distribute, or
+create derivative works of the Software. In particular:
+
+a. You may not run the Software for any purpose, in any environment,
+   without a separate written license from the copyright holder.
+
+b. You may not reuse the prompt templates, agent designs, or
+   orchestration patterns from this Software in derivative software,
+   whether commercial, academic, or personal.
+
+c. You may not redistribute, sublicense, sell, or host the Software,
+   in source or compiled form.
+
+
+PERMITTED INSPECTION
+--------------------
+
+The following activities are permitted without a separate license:
+
+1. Reading the source code, prompts, configurations, and documentation
+   in this repository for educational or evaluation purposes.
+
+2. Citing the Software in academic publications, talks, or research
+   notes with standard attribution.
+
+3. Filing issues, proposing improvements via pull requests, or
+   reporting bugs to the copyright holder.
+
+
+RUNNING THE SOFTWARE
+--------------------
+
+The Software is distributed as a Docker image hosted in a private
+container registry. Pull access to that registry is granted on a
+case-by-case basis under a separate written license with the copyright
+holder. Without both (a) such pull access AND (b) a written use
+license, you cannot run the Software, regardless of what you can read
+in this repository.
+
+
+RESERVED RIGHTS
+---------------
+
+The copyright holder reserves all rights not expressly described
+above, including without limitation the rights to:
+
+- License the Software (under any terms — exclusive or non-exclusive,
+  commercial or non-commercial, perpetual or limited-term) to any
+  party at the copyright holder's sole discretion.
+
+- Commercialize the Software, including as a paid service, hosted
+  API, or productized derivative.
+
+- Develop, distribute, or commercialize derivative works based on
+  the Software.
+
+- Re-license the Software under different terms at any time, with no
+  obligation to existing licensees beyond what their individual
+  license agreements provide.
+
+
+WARRANTY DISCLAIMER
+-------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT,
+OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+CONTACT
+-------
+
+For licensing inquiries — including commercial use, evaluation
+access, hosted access, or any other use beyond the inspection rights
+listed above — open an issue on this repository or contact the
+copyright holder via the email associated with the GitHub account
+above.
+
+This notice must accompany all copies and substantial portions of the
+Software.

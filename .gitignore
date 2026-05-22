@@ -1,0 +1,9 @@
+# Secrets
+.env
+
+# Heavy / re-fetchable artifacts
+knowledge_base/raw/*.pdf
+knowledge_base/raw/*.html
+
+# OS
+.DS_Store

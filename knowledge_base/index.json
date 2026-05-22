@@ -1,0 +1,170 @@
+[
+  {
+    "url": "https://bitvm.org/bitvm.pdf",
+    "title": "BitVM: Compute Anything on Bitcoin",
+    "authors": [
+      "Robin Linus"
+    ],
+    "abstract": "BitVM is a computing paradigm to express Turing-complete Bitcoin contracts. This requires no changes to the network's consensus rules. Rather than executing computations on Bitcoin, they are merely verified, similarly to optimistic rollups. A prover makes a claim that a given function evaluates for some particular inputs to some specific output. If that claim is false, then the verifier can perform a succinct fraud proof and punish the prover. Using this mechanism, any computable function can be verified on Bitcoin.",
+    "keywords": [
+      "bitcoin",
+      "turing-completeness",
+      "fraud-proofs",
+      "taproot",
+      "off-chain-computation",
+      "two-party-protocols",
+      "circuit-verification"
+    ]
+  },
+  {
+    "url": "https://bitvm.org/bitvm_bridge.pdf",
+    "title": "BitVM2: Bridging Bitcoin to Second Layers",
+    "authors": [
+      "Robin Linus",
+      "Lukas Aumayr",
+      "Alexei Zamyatin",
+      "Andrea Pelosi",
+      "Zeta Avarikioti",
+      "Matteo Maffei"
+    ],
+    "abstract": "BitVM2 is a novel paradigm that enables arbitrary program execution in Bitcoin, thereby combining Turing-complete expressiveness with the security of Bitcoin consensus. At its core, BitVM2 leverages optimistic computation, assuming operators are honest unless proven otherwise by challengers through fraud proofs, and SNARK proof verification scripts, which are split into sub-programs that are executed within Bitcoin transactions. As a result, BitVM2 ensures program correctness with just three on-chain transactions. BitVM2 significantly improves over prior BitVM designs by enabling, for the first time, permissionless challenging and by reducing the complexity and number of on-chain transactions required to resolve disputes. Our construction requires no consensus changes to Bitcoin. BitVM Bridge, a protocol that enhances prior Bitcoin bridges by reducing trust assumptions for the safety of deposits from an honest majority (t-of-n) to existential honesty (1-of-n) during setup, is presented as an application.",
+    "keywords": [
+      "bitvm2",
+      "optimistic-computation",
+      "snark-verification",
+      "fraud-proofs",
+      "bitcoin-bridge",
+      "layer-2",
+      "permissionless-challenging"
+    ]
+  },
+  {
+    "url": "https://bitvm.org/bitvm3.pdf",
+    "title": "BitVM 3s – Garbled Circuits for Efficient Computation on Bitcoin",
+    "authors": [
+      "Robin Linus"
+    ],
+    "abstract": "BitVM 3s enables efficient SNARK proof verification on Bitcoin by leveraging garbled circuits to shift computation off-chain. BitVM2 requires large on-chain transactions of 4 MB. In contrast, BitVM 3s reduces the assertion transaction to≈ 66 kB and the disproval transaction to≈ 20 kB, cutting dispute costs by about 1,000x in comparison to its predecessor, BitVM2. The protocol builds upon the Delbrag scheme but introduces BitHash, a novel hash function optimized for Bitcoin Script's constraints, reducing the collateral requirements from over $10,000 to under $100, making it economically feasible for Bitcoin bridges.",
+    "keywords": [
+      "bitvm",
+      "garbled-circuits",
+      "snark-verification",
+      "bitcoin-script",
+      "bithash",
+      "fraud-proofs",
+      "bridges"
+    ]
+  },
+  {
+    "url": "https://robinlinus.com/binohash.pdf",
+    "title": "Binohash: Transaction Introspection Without Softforks",
+    "authors": [
+      "Robin Linus"
+    ],
+    "abstract": "We present Binohash, a collision-resistant hash function for Bitcoin Script that enables limited transaction introspection without consensus changes. By exploiting the FindAndDelete quirk in legacy OP_CHECKMULTISIG combined with proof-of-work signature grinding, Binohash creates a transaction digest directly readable in Script. This enables covenant-like functionality for trustless chain introspection for protocols like BitVM bridges. Our scheme achieves W1 + W2 bits of collision resistance with ≈ W2 + 2.6 bits of honest work, using a two-round nonce extraction protocol. With W1 = W2 = 42 bits, this provides ∼84 bits collision resistance with ∼44.6 bits honest work, with grinding cost of less than $50 on modern cloud GPUs.",
+    "keywords": [
+      "bitcoin-script",
+      "transaction-introspection",
+      "signature-puzzles",
+      "find-and-delete",
+      "bitvm-bridges",
+      "collision-resistance",
+      "proof-of-work",
+      "covenants"
+    ]
+  },
+  {
+    "url": "https://eprint.iacr.org/2025/1485.pdf",
+    "title": "Glock: Garbled Locks for Bitcoin",
+    "authors": [
+      "Liam Eagen"
+    ],
+    "abstract": "Bitcoin supports a limited set of smart contracts through bitcoin script. To enable more expressive scripting, optimistic smart contract protocols like BitVM verify arbitrary computation by allowing challengers to publish fraud proofs. We introduce Garbled Locks (Glocks), a new formalization of garbled circuit (GC) based optimistic techniques that use GCs to leak a secret and produce a fraud proof, replacing BitVM's interactive bisection game. We propose Glock25, the first concretely practical Glock construction that does not require the Grug technique for malicious security. Glock25 reduces verification of bounded computation to SNARK verification using a novel Designated Verifier version of the SNARK Pari with smaller proof size. We achieve malicious security through Cut-and-Choose, Verifiable Secret Sharing, and Adaptor Signatures, reducing communication, computational, and on-chain complexity compared to other Glock approaches.",
+    "keywords": [
+      "garbled-circuits",
+      "bitcoin",
+      "optimistic-rollups",
+      "snark",
+      "adaptor-signatures",
+      "cut-and-choose",
+      "designated-verifier",
+      "smart-contracts"
+    ]
+  },
+  {
+    "url": "https://eprint.iacr.org/2026/065",
+    "title": "BABE: Verifying Proofs on Bitcoin Made 1000x Cheaper",
+    "authors": [
+      "Sanjam Garg",
+      "Dimitris Kolonelos",
+      "Mikhail Sergeevitch",
+      "Srivatsan Sridhar",
+      "David Tse"
+    ],
+    "abstract": "Endowing Bitcoin with the ability to verify succinct proofs has been a longstanding problem with important applications such as scaling Bitcoin and allowing the Bitcoin asset to be used in other blockchains trustlessly. It is a challenging problem due to the lack of expressiveness in the Bitcoin scripting language and the small Bitcoin block space. BitVM2 is the state-of-the-art verification protocol for Bitcoin used in several mainnets and testnets, but it suffers from very high on-chain Bitcoin transaction fees in the unhappy path (over $14,000 in a recent experiment). Recent research BitVM3 dramatically reduces this on-chain cost by using a garbled SNARK verifier circuit to shift most of the verification off-chain, but each garbled circuit is 42 Gibytes in size, so the off-chain storage and setup costs are huge. This paper introduces BABE, a new proof verification protocol on Bitcoin, which preserves BitVM3's savings of on-chain costs but reduces its off-chain storage and setup costs by three orders of magnitude. BABE uses a witness encryption scheme for linear pairing relations to verify Groth16 proofs. Since Groth16 verification involves non-linear pairings, this witness encryption scheme is augmented with a secure two-party computation protocol implemented using a very efficient garbled circuit for scalar multiplication on elliptic curves. The design of this garbled circuit builds on a recent work, Argo MAC, which gives an efficient garbling scheme to compute homomorphic MACs on such curves.",
+    "keywords": [
+      "bitcoin-verification",
+      "proof-verification",
+      "witness-encryption",
+      "garbled-circuits",
+      "groth16",
+      "snark-verifier",
+      "elliptic-curve-cryptography"
+    ]
+  },
+  {
+    "url": "https://eprint.iacr.org/2025/591.pdf",
+    "title": "ColliderVM: Stateful Computation on Bitcoin without Fraud Proofs",
+    "authors": [
+      "Victor I. Kolobov",
+      "Avihu M. Levy",
+      "Moni Naor"
+    ],
+    "abstract": "Bitcoin script cannot easily access and store state information onchain without an upgrade such as BIP-347 (OP_CAT); this makes performing general (stateful) computation on Bitcoin impossible to do directly. Despite this limitation, several approaches have been proposed to bypass it, with BitVM being the closest to production. BitVM enables fraud-proof-based computation on Bitcoin, relying on a 1-out-of-n honesty assumption. This paper answers the question of whether it is possible to achieve computation under the same honesty assumption without requiring onlookers to ensure validity through fraud proofs. We introduce ColliderVM, a new approach for performing computation on Bitcoin today. Crucially, this approach eliminates some capital inefficiency concerns stemming from reliance on fraud proofs. For our construction, a key point is to replace the Lamport or Winternitz signature-based storage component in contemporary protocols with a hash collision-based commitment. Our techniques are inspired by ColliderScript, but are more efficient, reducing the number of hash evaluations required by at least ×10000. With it, we estimate that the Bitcoin script length for STARK proof verification becomes nearly practical.",
+    "keywords": [
+      "bitcoin",
+      "stateful-computation",
+      "hash-collisions",
+      "presigned-transactions",
+      "l2-bridges",
+      "stark-verification"
+    ]
+  },
+  {
+    "url": "https://eprint.iacr.org/2025/912.pdf",
+    "title": "Enforcing arbitrary constraints on Bitcoin transactions",
+    "authors": [
+      "Federico Barbacovi",
+      "Enrique Larraia"
+    ],
+    "abstract": "The challenge of enforcing constraints on Bitcoin transactions has recently gained a lot of attention. The current approach to solve this problem falls short in certain aspects, such as privacy and programmability. We design a new solution that leverages zkSNARKs and allows enforcing arbitrary constraints on Bitcoin transactions while maintaining some information private. Our approach also bypasses the non-Turing completeness of Bitcoin Script, allowing the enforcement of unbounded constraints, namely constraints that repeat a certain operation an unbounded number of times.",
+    "keywords": [
+      "bitcoin",
+      "zero-knowledge",
+      "zksnarks",
+      "transaction-constraints",
+      "bitcoin-script",
+      "smart-contracts",
+      "proof-of-burn"
+    ]
+  },
+  {
+    "url": "https://zerosync.org/zerosync.pdf",
+    "title": "ZeroSync: Introducing Validity Proofs to Bitcoin",
+    "authors": [
+      "Robin Linus",
+      "Lukas George"
+    ],
+    "abstract": "We introduce ZeroSync, the first-ever proof system addressing Bitcoin's scalability challenges with Succinct Non-Interactive Argument of Knowledge (SNARKs). ZeroSync compresses the entire Bitcoin blockchain into a compact proof of validity, enabling instant verification and unlocking various innovative applications. We discuss our prototype implementation of a chain state proof, utilizing the Cairo language, Utreexo, and recursive STARKs. Our work enables diverse applications, including quick bootstrapping of full nodes, trustless light clients, enhanced Lightning Network privacy, and secure cross-chain bridges. Chain state proofs require no consensus changes, which is crucial as forks in Bitcoin are challenging to implement and achieve consensus for. Despite the existing bottleneck of prover performance, we present a range of optimization strategies and demonstrate the practicality of generating a complete chain state proof. Finally, we introduce zkCoins, a client-side validation protocol combined with zero-knowledge SNARKs, drastically improving privacy and throughput of token transactions.",
+    "keywords": [
+      "bitcoin",
+      "starks",
+      "snark",
+      "chain-state-proof",
+      "utreexo",
+      "client-side-validation",
+      "zkcoins",
+      "recursive-proofs"
+    ]
+  }
+]
