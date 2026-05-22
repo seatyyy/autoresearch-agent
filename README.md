@@ -1,8 +1,17 @@
+<p align="center">
+  <img src="banner.png" alt="AutoResearch" width="500">
+</p>
+
 # AutoResearch
 
 Autonomous research assistant. Given a topic and a small set of reference papers, AutoResearch scopes the problem (with a critic-evolve loop), runs a literature search, designs and executes experiments, and writes a 2-page mini-paper plus a one-page executive summary end-to-end.
 
 ***Note***: this repo is the shell version of this product for the labs we're collaborating with. It doesn't contain the full code. Licensed research groups have access to the docker image of this product. 
+
+<p align="left">
+  <img src="image.png" alt="AutoResearch" width="650">
+</p>
+
 
 ## Setup
 
