@@ -4,20 +4,20 @@
 # Folder layout: {output_dir}/{project_id}/{user_id}_{YYYYMMDDTHHMMSS}/
 
 # --- required ---
-topic: "Your research problem in one sentence."
+topic: "In BitVM3, garbled circuits are used to do off-chain proof verification based on a signed proof put on the Bitcoin chain. The signed proof is input into the garbled circuit as input labels. In most existing designs, the signature scheme is a Lamport signature, which is verifiable by Bitcoin. Can you provide a re-design using Winternitz signatures instead of Lamport signatures?"
 
-project_id: "your-project-name"    # slug: [a-z0-9_-], groups runs within a research area
-user_id: "your-name"                          # slug: identifies who launched the run
+project_id: "redesign-signature-scheme"    # slug: [a-z0-9_-], groups runs within a research area
+user_id: "your_user_name"                          # slug: identifies who launched the run
 is_base_run: true                          # true = fresh start; false = iterate on a prior run
 
 note: ""
 
 # --- iterative runs only (omit or set null when is_base_run: true) ---
-# base_run_id: "your-name_20260415T102233"    # a prior run folder name under this project_id
+# base_run_id: "yourusername_20260415T102233"    # a prior run folder name under this project_id
 # feedbacks_file: "./feedbacks.md"         # markdown file of reviewer feedback, relative to this config
 
 # --- model ---
-model: "claude-opus-4-7"
+model: "claude-sonnet-4-6"
 
 # --- seed papers (optional)
 # Either a path to a JSON file in knowledge_base/index.json format

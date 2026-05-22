@@ -20,10 +20,22 @@ set -euo pipefail
 # CHANGELOG.md before overriding to :latest.
 PINNED_VERSION="1.0"
 VERSION="${AUTORESEARCH_VERSION:-$PINNED_VERSION}"
-IMAGE="ghcr.io/REPLACEME/autoresearch:${VERSION}"
+
+# Image registry owner. Override at invocation time via:
+#   AUTORESEARCH_IMAGE_OWNER=other-user ./run.sh ...
+IMAGE_OWNER="${AUTORESEARCH_IMAGE_OWNER:-seatyyy}"
+IMAGE="ghcr.io/${IMAGE_OWNER}/autoresearch:${VERSION}"
 PORT="${AUTORESEARCH_PORT:-8000}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Catch the legacy unfilled placeholder before docker gets a confusing
+# "must be lowercase" error.
+if [[ "$IMAGE_OWNER" == "REPLACEME" || "$IMAGE_OWNER" == *[A-Z]* ]]; then
+  echo "run.sh: IMAGE_OWNER='$IMAGE_OWNER' isn't a valid GitHub username." >&2
+  echo "Edit IMAGE_OWNER at the top of run.sh, or set AUTORESEARCH_IMAGE_OWNER=<your-handle>." >&2
+  exit 1
+fi
 
 # .env must exist with ANTHROPIC_API_KEY.
 if [[ ! -f "$HERE/.env" ]]; then

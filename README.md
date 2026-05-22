@@ -1,33 +1,37 @@
-<p align="center">
-  <img src="banner.png" alt="AutoResearch" width="500">
-</p>
-
 # AutoResearch
 
 Autonomous research assistant. Given a topic and a small set of reference papers, AutoResearch scopes the problem (with a critic-evolve loop), runs a literature search, designs and executes experiments, and writes a 2-page mini-paper plus a one-page executive summary end-to-end.
 
 ***Note***: this repo is the shell testing version for the labs (design partners) we're collaborating with. It doesn't contain the full code. Licensed research groups have access to the docker image of this product. 
 
-<p align="left">
-  <img src="image.png" alt="AutoResearch" width="650">
-</p>
-
-
 ## Setup
 
-```bash
-# 1. Install (uses uv)
-uv sync
+You'll need Docker and pull access to the AutoResearch image (granted by your contact via a GitHub Personal Access Token with `read:packages` scope).
 
-# 2. API key
-echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env
+```bash
+# 1. Install Docker
+#    macOS:  brew install --cask docker  (then launch Docker.app once)
+#    Linux:  https://docs.docker.com/engine/install/
+
+# 2. Authenticate against the AutoResearch image registry
+docker login ghcr.io
+#   username: your GitHub username
+#   password: the PAT shared with you (read:packages scope)
+
+# 3. Set your API key
+cp .env.example .env
+vim .env            # paste your ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+That's it. The pipeline + orchestration code lives inside the Docker image; you don't install Python or any deps locally.
 
 ## Quick start
 
-### Step 1. List the reference papers in `knowledge_base/references.json`
+All commands below use `./run.sh`, the wrapper in this repo that pulls the Docker image and mounts your local `prompts/`, `config*.yaml`, `knowledge_base/`, and `research_runs/` into the container. You never write `docker run` by hand.
 
-Create the file at the repo root (or wherever your config lives — see "References file location" below) with a flat JSON list of URLs:
+### Step 1. List your reference papers
+
+Edit `knowledge_base/references.json` — a flat JSON list of paper URLs:
 
 ```json
 [
@@ -36,42 +40,95 @@ Create the file at the repo root (or wherever your config lives — see "Referen
 ]
 ```
 
-Max 10 URLs per run (hard cap — raise with `scope_kb_max_papers` if you need more).
+Max 10 URLs per run (hard cap — raise via `scope_kb_max_papers` in the config).
 
 ### Step 2. Build the knowledge base
 
-```bash
-uv run python build_knowledgedb.py
+The first time you run the pipeline, the scope stage automatically fetches every URL in `references.json`, markdownifies the paper body, and extracts metadata via the LLM. Output lands in `knowledge_base/index.json` + `knowledge_base/raw/<slug>.{pdf,html,md}`. Subsequent runs reuse the cache — already-indexed URLs are skipped.
+
+You don't need to run any command here; just save `references.json` and proceed.
+
+> **Coming in image v0.6+:** an explicit `./run.sh build-kb` to pre-warm the cache before running the pipeline (faster than letting scope stage do it inline). See "Manual build" under Knowledge Base.
+
+### Step 3. Edit `config.yaml`
+
+You can use the current `config.yaml` file as your starting point. See "Configuration" section below for the full explanations of each parameter. 
+
+```yaml
+# AutoResearch run configuration
+# Invoke with: uv run python cli.py run --config config.yaml
+#
+# Folder layout: {output_dir}/{project_id}/{user_id}_{YYYYMMDDTHHMMSS}/
+
+# --- required ---
+topic: "Your research problem in one sentence."
+
+project_id: "your-project-name"    # slug: [a-z0-9_-], groups runs within a research area
+user_id: "your-name"                          # slug: identifies who launched the run
+is_base_run: true                          # true = fresh start; false = iterate on a prior run
+
+note: ""
+
+# --- iterative runs only (omit or set null when is_base_run: true) ---
+# base_run_id: "your-name_20260415T102233"    # a prior run folder name under this project_id
+# feedbacks_file: "./feedbacks.md"         # markdown file of reviewer feedback, relative to this config
+
+# --- model ---
+model: "claude-opus-4-7"
+
+# --- seed papers (optional)
+# Either a path to a JSON file in knowledge_base/index.json format
+# (recommended — gives both stage_scope context and stage_literature KB matches)
+# OR an inline list of URL strings (lighter — scope context only, no KB match).
+# Omit to run without seeds.
+# seed_papers: "./knowledge_base/index.json"
+
+# --- stage 2 tunables (optional; defaults shown) ---
+lit_results_per_query: 5    # raw hits pulled per web_search query before dedupe
+lit_top_n: 20                # ranked survivors kept for synthesis
+
+# Global default for every LLM call (default 4096)
+max_tokens: 16384
+
+# --- experimentation Codegen + patch override — needs more room because experiment code is long ---
+# (default 8192). Bump if codegen reports "hit max_tokens" truncation.
+exp_codegen_max_tokens: 16384
+exp_timeout_sec: 500
+exp_max_retries: 3
 ```
-
-This fetches every URL, extracts metadata (title, authors, abstract, keywords) via the LLM, and markdownifies the paper body. Output lands in `knowledge_base/index.json` + `knowledge_base/raw/<slug>.{pdf,html,md}`. Idempotent — URLs already in `index.json` are skipped on subsequent runs.
-
-You can technically skip this step — stage_scope will auto-build any missing entries on its first run — but pre-warming the cache makes the actual research run much faster.
-
-### Step 3. Write `config.yaml`
-
-See "Configuration" below for the full schema. The minimum required fields are: `topic`, `project_id`, `user_id`, `is_base_run`, `note`.
 
 ### Step 4. Run the pipeline
 
 ```bash
-# First, just run the scoping stage
-uv run python cli.py run --config config.yaml --stop-after scope
 
-# If the scoping looks good, resume the run, picking up from the stage
-uv run python cli.py run --config config.yaml \
+# Scope only — fast feedback loop when iterating on the topic / prompts
+./run.sh run --config config.yaml --stop-after scope
+
+# Resume from a specific stage on an existing run
+./run.sh run --config config.yaml \
   --resume <user_name>_20260521T143000 \
   --start-from literature
 
-# Verbose (prints every system+user prompt to stderr)
-uv run python cli.py run --config config.yaml --debug
+# If you are confident of AI gets scoping correctly, directly do the Full run
+./run.sh run --config config.yaml
 ```
 
-Outputs land in `research_runs/<project_id>/<user_id>_<timestamp>/`. The `00_summary.md` at the top is the executive briefing — start there.
+Outputs land in `research_runs/<project_id>/<user_id>_<timestamp>/`. **Start with `00_summary.md`** — the executive briefing aggregates everything else.
+
+### Step 5. (Coming in image v0.6+) Use the web UI
+
+```bash
+./run.sh serve            # ⚠️ requires image v0.6+
+# → open http://127.0.0.1:8000
+```
+
+The dashboard lets you pick a config, edit it inline (YAML syntax highlighting), launch runs, watch the live log stream, browse rendered artifacts, and spawn iterative runs from a feedback textarea — all without leaving the browser.
+
+Until v0.6 ships, use the CLI workflow in Step 4.
 
 ### References file location
 
-By convention the system auto-discovers `<config_dir>/knowledge_base/references.json`. Override with the `references:` field in your config if you keep your KB elsewhere (e.g. shared across projects).
+By convention the system auto-discovers `knowledge_base/references.json` next to your config. Override with the `references:` field in your config if you keep your KB elsewhere (e.g. shared across projects).
 
 ## Knowledge base
 
@@ -100,20 +157,22 @@ When stage_scope runs, it reads `references.json` and for each URL not yet in `i
 
 Already-indexed URLs are skipped. So `references.json` is the only file you edit; the system handles the rest.
 
-### Manual build (optional)
+### Manual build (image v0.6+)
 
-You can also pre-warm the cache before running the pipeline:
+Once you're on image v0.6 or later, you can pre-warm the cache before running the pipeline:
 
 ```bash
-# Default knowledge_base/ next to the repo root
-uv run python build_knowledgedb.py
+# Default knowledge_base/
+./run.sh build-kb
 
 # A different directory (e.g. per-project KB)
-uv run python build_knowledgedb.py --kb-dir bitcoin_kb
+./run.sh build-kb --kb-dir bitcoin_kb
 
-# Re-extract everything
-uv run python build_knowledgedb.py --force
+# Re-extract everything (ignore cache)
+./run.sh build-kb --force
 ```
+
+On v0.5 this command does not exist yet — rely on the auto-build that happens during the first scope-stage run.
 
 ### Constraints
 
@@ -123,168 +182,161 @@ uv run python build_knowledgedb.py --force
 
 ## Configuration
 
-All paths in the YAML resolve relative to the config file's directory, not the shell's working directory.
+All paths in the YAML resolve relative to the config file's directory (not the shell's working directory). Required fields must be set explicitly; optional fields fall back to the defaults below.
 
-### Full config example
+### Required
 
-This shows every field. Required fields are uncommented; optional fields show their default value.
+
+| Field         | Type   | Default | Description                                                                                                                     |
+| ------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `topic`       | string | —       | The research problem in one sentence. Drives every downstream stage.                                                            |
+| `project_id`  | slug   | —       | Groups runs of the same research area. Allowed chars: lowercase letters, digits, `_`, `-`. Must start and end alphanumerically. |
+| `user_id`     | slug   | —       | Identifies who launched the run. Same slug rules. Folder names embed this: `research_runs/<project_id>/<user_id>_<timestamp>/`. |
+| `is_base_run` | bool   | —       | `true` = fresh run; `false` = iterative run (then `base_run_id` + `feedbacks_file` are required).                               |
+| `note`        | string | —       | Free-text note shown in the scope artifact's header. Use `""` if none. Good for tagging a run with a short reminder.            |
+
+
+### Iterative run only (omit when `is_base_run: true`)
+
+
+| Field            | Type   | Default | Description                                                                                                                                                                |
+| ---------------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_run_id`    | string | —       | Run folder name to refine. Accepted shapes: leaf (`<user>_20260508T132542`), project-qualified (`<project_id>/<leaf>`), or full path (`<output_dir>/<project_id>/<leaf>`). |
+| `feedbacks_file` | path   | —       | Path to a markdown file containing reviewer feedback. Each stage reads its prior artifact + this file to produce a refined version.                                        |
+
+
+### Knowledge base
+
+
+| Field                          | Type | Default                            | Description                                                                                                                                                                       |
+| ------------------------------ | ---- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `references`                   | path | `./knowledge_base/references.json` | Path to `references.json` (flat JSON list of paper URLs). Auto-discovered if omitted. Set explicitly only when the KB lives elsewhere (e.g. shared across projects).              |
+| `scope_kb_max_papers`          | int  | `10`                               | Hard ceiling on URLs in `references.json`. Scope stage fails BEFORE fetching if exceeded. Default assumes 10 papers × 40k chars ≈ 100k tokens injected into every sub-agent call. |
+| `scope_kb_max_chars_per_paper` | int  | `40000`                            | Per-paper char cap when injecting markdown into sub-agent prompts. Longer papers are head-truncated with a `[...TRUNCATED]` marker and a log alert.                               |
+
+
+### Model
+
+
+| Field        | Type   | Default           | Description                                                                                                                                                                                        |
+| ------------ | ------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`      | string | `claude-opus-4-6` | Anthropic model for the main pipeline (scope, rank, synth, experiment). Stage 2 also spins up Haiku for cheap query-gen + web search regardless. Examples: `claude-opus-4-7`, `claude-sonnet-4-6`. |
+| `max_tokens` | int    | `4096`            | Default per-call output cap. Codegen uses `exp_codegen_max_tokens` instead. Raise for stages that emit long markdown (memo, summary); lower to enforce conciseness.                                |
+
+
+### Output
+
+
+| Field        | Type | Default           | Description                                                                                          |
+| ------------ | ---- | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `output_dir` | path | `./research_runs` | Where run folders are written. Each run lands at `<output_dir>/<project_id>/<user_id>_<timestamp>/`. |
+
+
+### Stage 2 — Literature search
+
+
+| Field                   | Type | Default | Description                                                                                                           |
+| ----------------------- | ---- | ------- | --------------------------------------------------------------------------------------------------------------------- |
+| `lit_results_per_query` | int  | `10`    | Raw web-search hits pulled per query before dedupe. Lower to save tokens; raise for broader coverage of niche topics. |
+| `lit_top_n`             | int  | `12`    | Ranked survivors fed into the synthesis call. Drives the size of the final `02_literature.md`.                        |
+
+
+### Stage 3 — Experiment
+
+
+| Field                    | Type | Default | Description                                                                                                                                                      |
+| ------------------------ | ---- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exp_timeout_sec`        | int  | `300`   | Wall-clock budget (seconds) for ONE attempt of the generated experiment subprocess. On timeout, the self-heal loop feeds the traceback back for a patch.         |
+| `exp_max_retries`        | int  | `3`     | Self-heal attempts before giving up. Each retry costs one LLM patch call plus one subprocess run.                                                                |
+| `exp_codegen_max_tokens` | int  | `32768` | Per-call output cap for codegen + patch (separate from `max_tokens` because experiment code is long and easy to truncate mid-file). Sonnet supports up to 64000. |
+
+
+### Quick-start template
+
+A minimal working config:
 
 ```yaml
-# ── Required ──────────────────────────────────────────────────────────
-
-# The research problem in one sentence. Drives every downstream stage.
-topic: "Optimize Bitcoin on-chain cost for bridge publication."
-
-# Project slug — groups runs of the same research area together.
-# Allowed chars: lowercase letters, digits, underscore, hyphen.
-# Must start and end alphanumerically.
-project_id: "bitcoin-cost-optimization"
-
-# User slug — identifies who launched the run. Same rules as project_id.
-# Folder names embed this: research_runs/<project_id>/<user_id>_<timestamp>/
-user_id: "xxx"
-
-# true  = fresh run; later fields starting with `base_run_id` / `feedbacks_file`
-#         MUST be omitted.
-# false = iterative run; `base_run_id` + `feedbacks_file` REQUIRED below.
+topic: "Your research problem in one sentence."
+project_id: "my-project"
+user_id: "yourname"
 is_base_run: true
-
-# Free-text note shown in the scope artifact's header. Use "" if none.
-# Good for tagging a run with a short reminder (e.g. "trying smaller KB").
 note: ""
-
-
-# ── Iterative run only — omit when is_base_run: true ─────────────────
-
-# Run folder name to refine. Three accepted shapes:
-#   leaf:                 <user_name>_20260508T132542
-#   project-qualified:    bitcoin-cost-optimization/<user_name>_20260508T132542
-#   full path:            research_runs/bitcoin-cost-optimization/<user_name>_...
-# base_run_id: "<user_name>_20260508T132542"
-
-# Path to a markdown file containing reviewer feedback for this iteration.
-# Resolved relative to the config file. Each stage reads its prior artifact
-# and this file to produce a refined version.
-# feedbacks_file: "./feedbacks.md"
-
-
-# ── Knowledge base ────────────────────────────────────────────────────
-
-# Path to references.json (a flat JSON list of paper URLs). If omitted,
-# auto-discovers <config_dir>/knowledge_base/references.json. Set explicitly
-# only when your KB lives elsewhere (e.g. shared across projects).
-# references: "./knowledge_base/references.json"
-
-# Hard ceiling on the number of URLs in references.json. Scope stage fails
-# BEFORE doing any fetching when this is exceeded. Default is the safe
-# context-budget assumption: 10 papers × 40k chars ≈ 100k tokens injected
-# into every sub-agent call. Raise only if you've measured the token math.
-scope_kb_max_papers: 10
-
-# Per-paper char cap when injecting markdown into sub-agent prompts.
-# Papers longer than this are head-truncated with a "[...TRUNCATED]" marker
-# and an alert in the log. Raise for dense papers; lower to save tokens.
-scope_kb_max_chars_per_paper: 40000
-
-
-# ── Model ─────────────────────────────────────────────────────────────
-
-# Anthropic model used for the main pipeline (scope, rank, synth, experiment).
-# Stage 2 also spins up a haiku for cheap query-gen + web search regardless.
-# Examples: claude-opus-4-7, claude-sonnet-4-6
-model: "claude-opus-4-7"
-
-# Default per-call output cap. Each LLM.complete() defaults to this unless
-# overridden (codegen uses exp_codegen_max_tokens below). Raise for stages
-# that emit long markdown (memo, summary); lower to enforce conciseness.
-max_tokens: 16384
-
-
-# ── Output ────────────────────────────────────────────────────────────
-
-# Where run folders are written. Each run lands at
-# <output_dir>/<project_id>/<user_id>_<timestamp>/. Default: ./research_runs
-output_dir: "./research_runs"
-
-
-# ── Stage 2: literature search ───────────────────────────────────────
-
-# Raw hits pulled per web_search query before dedupe. Lower to save haiku
-# tokens / wall-clock; raise for broader coverage of niche topics.
-lit_results_per_query: 5
-
-# Number of ranked survivors that enter the synthesis call. The synthesis
-# LLM sees one paper-row per item, so this drives the size of the final
-# literature.md. Default: 12.
-lit_top_n: 20
-
-
-# ── Stage 3: experiment ──────────────────────────────────────────────
-
-# Wall-clock budget (seconds) for ONE attempt of the generated experiment
-# subprocess. If it times out, the self-heal loop feeds the traceback back
-# to the LLM for a patch. Raise for simulations with high trial counts.
-exp_timeout_sec: 500
-
-# Self-heal attempts before giving up. Each retry costs one LLM patch call
-# plus one subprocess run. Default: 3.
-exp_max_retries: 3
-
-# Per-call output cap for codegen + patch (separate from max_tokens because
-# experiment code is long — easy to truncate mid-file otherwise).
-# Default: 32768. Sonnet supports up to 64000.
-exp_codegen_max_tokens: 16384
 ```
 
-## CLI
+Everything else has a default. Edit any of the tunables above as needed.
+
+## CLI reference
+
+All commands go through `./run.sh`, which dispatches to the right entrypoint inside the Docker image.
+
+### Available in v0.5
 
 ```bash
-# First, just run the scoping stage
-uv run python cli.py run --config config_bt.yaml --stop-after scope
+./run.sh run --config config.yaml                          # full pipeline
+./run.sh run --config config.yaml --stop-after scope       # one stage only
+./run.sh run --config config.yaml --start-from literature \
+            --resume <user_name>_20260521T143000           # resume on existing run
+./run.sh run --config config.yaml --debug                  # dump every prompt+response to stderr
 
-# If the scoping looks good, resume the run, picking up from the stage
-uv run python cli.py run --config config_bt.yaml \
-  --resume <user_name>_20260521T143000 \
-  --start-from literature
-
-# Verbose (prints every system+user prompt to stderr)
-uv run python cli.py run --config config_bt.yaml --debug
+# Try a different image tag without editing run.sh:
+AUTORESEARCH_VERSION=latest ./run.sh run --config ...
 ```
 
-Stage names: `scope`, `literature`, `experiment`, `summary`.
+Stage names (for `--stop-after` / `--start-from`): `scope`, `literature`, `experiment`, `summary`.
+
+### Coming in v0.6+
+
+```bash
+# Knowledge base — pre-warm before the pipeline runs:
+./run.sh build-kb                                          # fetch + index references.json
+./run.sh build-kb --force                                  # re-extract everything
+./run.sh build-kb --kb-dir bitcoin_kb                      # use a non-default KB folder
+
+# Web UI:
+./run.sh serve                                             # http://127.0.0.1:8000
+AUTORESEARCH_PORT=8080 ./run.sh serve                      # alternate port
+```
+
+These commands will return `invalid choice` on v0.5 — they require a newer image. Your contact will let you know when to bump `PINNED_VERSION` in `run.sh`.
 
 ### Iterative runs
 
-Edit your config:
+Edit your config to flip into iterative mode:
 
 ```yaml
 is_base_run: false
 base_run_id: "<user_name>_20260521T143000"   # the prior run to refine
-feedbacks_file: "./feedbacks.md"         # your free-text feedback
+feedbacks_file: "./feedbacks.md"             # your free-text feedback
 ```
 
-Then run normally — each stage adapts its prior artifact against the feedback. The summary stage adds a `### Changes from base run` section.
-
-## Web UI
+Write a paragraph or two of guidance into `feedbacks.md`, then run normally:
 
 ```bash
-uv run python -m app
+./run.sh run --config config.yaml
+```
+
+Each stage reads its prior artifact + your feedback and produces a refined version. The summary stage adds a `### Changes from base run` section listing the deltas.
+
+## Web UI (image v0.6+)
+
+```bash
+./run.sh serve            # ⚠️ requires image v0.6+
 # → http://127.0.0.1:8000
 ```
 
-Dashboard lists every project's runs (newest first) and shows a YAML preview of the selected config. Click any run for the live log + rendered markdown artifacts + an **Iterate this run** button that spawns a refinement from a feedback textarea.
+Dashboard lists every project's runs (newest first) and embeds a YAML editor with syntax highlighting for the selected config. Click any run for the live log stream, rendered markdown artifacts (00_summary, 04_memo, etc.), and an **Iterate this run** button that spawns a refinement from a feedback textarea.
 
-Port via `AUTORESEARCH_PORT` (default 8000). One run at a time.
+Port via `AUTORESEARCH_PORT` (default 8000). One run at a time. **Not available on v0.5** — the image's entrypoint doesn't yet know the `serve` subcommand.
 
 ## Pipeline stages
 
 
-| #   | File                               | Output                                                                   |
-| --- | ---------------------------------- | ------------------------------------------------------------------------ |
-| 1   | `src/pipeline/stage_scope.py`      | `01_*.md` — analysis, eval_design, scope (with critic/evolve iterations) |
-| 2   | `src/pipeline/stage_literature.py` | `02_literature.md` — annotated bibliography + gap analysis               |
-| 3   | `src/pipeline/stage_experiment.py` | `03_experiment/{run.py, analysis.md, ...}` + `04_memo.md` (mini paper)   |
-| 4   | `src/pipeline/stage_summary.py`    | `00_summary.md` — executive briefing at the top of the run folder        |
+| #   | Stage          | Output                                                                            |
+| --- | -------------- | --------------------------------------------------------------------------------- |
+| 1   | **Scope**      | `01_*.md` — analysis, eval_design, scope, with critic/evolve iterations (up to 3) |
+| 2   | **Literature** | `02_literature.md` — annotated bibliography + gap analysis                        |
+| 3   | **Experiment** | `03_experiment/{run.py, analysis.md, ...}` + `04_memo.md` (mini paper)            |
+| 4   | **Summary**    | `00_summary.md` — executive briefing at the top of the run folder                 |
 
 
 ## Output artifacts — what's in a run folder
