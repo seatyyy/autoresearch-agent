@@ -30,8 +30,10 @@ PORT="${AUTORESEARCH_PORT:-8000}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Catch the legacy unfilled placeholder before docker gets a confusing
-# "must be lowercase" error.
-if [[ "$IMAGE_OWNER" == "REPLACEME" || "$IMAGE_OWNER" == *[A-Z]* ]]; then
+# "must be lowercase" error. Use [[:upper:]] (POSIX char class) — the
+# bare [A-Z] bracket uses locale collation order under en_US.UTF-8,
+# which silently includes lowercase letters too.
+if [[ "$IMAGE_OWNER" == "REPLACEME" || "$IMAGE_OWNER" == *[[:upper:]]* ]]; then
   echo "run.sh: IMAGE_OWNER='$IMAGE_OWNER' isn't a valid GitHub username." >&2
   echo "Edit IMAGE_OWNER at the top of run.sh, or set AUTORESEARCH_IMAGE_OWNER=<your-handle>." >&2
   exit 1
