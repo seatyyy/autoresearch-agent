@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="banner.png" alt="AutoResearch" width="500">
+  <img src="assets/banner.png" alt="AutoResearch" width="500">
 </p>
 
 # AutoResearch
@@ -9,7 +9,7 @@ Autonomous research assistant. Given a topic and a small set of reference papers
 ***Note***: this repo is the shell testing version for the labs (design partners) we're collaborating with. It doesn't contain the full code. Licensed research groups have access to the docker image of this product. 
 
 <p align="left">
-  <img src="image.png" alt="AutoResearch" width="650">
+  <img src="assets/image.png" alt="AutoResearch" width="650">
 </p>
 
 
@@ -137,13 +137,13 @@ The dashboard lets you pick a config, edit it inline (YAML syntax highlighting),
 Just like in CLI, we suggest running scope step first, for early intervention if you're not contented with the direction. 
 
 <p align="left">
-  <img src="web.png" alt="AutoResearch" width="650">
+  <img src="assets/web.png" alt="AutoResearch" width="650">
 </p>
 
 Then you can also resume from web 
 
 <p align="left">
-  <img src="resume.png" alt="AutoResearch" width="650">
+  <img src="assets/resume.png" alt="AutoResearch" width="650">
 </p>
 
 ### References file location
