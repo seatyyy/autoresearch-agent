@@ -107,7 +107,7 @@ exp_max_retries: 3
 
 ### Step 4. Run the pipeline
 
-You can choose to run from CLI 
+You can choose to run from the CLI or the Web UI. If you prefer to run using web UI, directly proceed to Step 5. Even if you run from CLI, you can still use UI to inspect and Markdown files - may provide you with better UX. 
 
 ```bash
 
@@ -123,18 +123,28 @@ You can choose to run from CLI
 ./run.sh run --config config.yaml
 ```
 
-Outputs land in `research_runs/<project_id>/<user_id>_<timestamp>/`. **Start with `00_summary.md`** — the executive briefing aggregates everything else.
+Outputs land in `research_runs/<project_id>/<user_id>_<timestamp>/`. Refer to section #Output artifacts below for descriptions of all output files. 
 
-### Step 5. (Coming in image v0.6+) Use the web UI
+### Step 5. Use the web UI
 
 ```bash
-./run.sh serve            # ⚠️ requires image v0.6+
+./run.sh serve            
 # → open http://127.0.0.1:8000
 ```
 
 The dashboard lets you pick a config, edit it inline (YAML syntax highlighting), launch runs, watch the live log stream, browse rendered artifacts, and spawn iterative runs from a feedback textarea — all without leaving the browser.
 
-Until v0.6 ships, use the CLI workflow in Step 4.
+Just like in CLI, we suggest running scope step first, for early intervention if you're not contented with the direction. 
+
+<p align="left">
+  <img src="web.png" alt="AutoResearch" width="650">
+</p>
+
+Then you can also resume from web 
+
+<p align="left">
+  <img src="resume.png" alt="AutoResearch" width="650">
+</p>
 
 ### References file location
 
@@ -143,18 +153,6 @@ By convention the system auto-discovers `knowledge_base/references.json` next to
 ## Knowledge base
 
 The knowledge base is the set of reference papers the scope stage feeds into every sub-agent (analysis, eval_design, scope orchestrator, critic, evolve). All you maintain is `references.json` — a flat list of URLs.
-
-### Folder layout
-
-```
-knowledge_base/
-├── references.json    ← you edit this
-├── index.json         ← auto-generated metadata (title, authors, abstract, keywords)
-└── raw/               ← auto-fetched paper bodies
-    ├── bitvm-compute-anything.md         ← markdown extracted from PDF/HTML
-    ├── bitvm-compute-anything.pdf        ← original (heavy; gitignored by default)
-    └── ...
-```
 
 ### Auto-build on scope-stage run
 
@@ -167,9 +165,9 @@ When stage_scope runs, it reads `references.json` and for each URL not yet in `i
 
 Already-indexed URLs are skipped. So `references.json` is the only file you edit; the system handles the rest.
 
-### Manual build (image v0.6+)
+### Manual build 
 
-Once you're on image v0.6 or later, you can pre-warm the cache before running the pipeline:
+You can pre-warm the cache before running the pipeline:
 
 ```bash
 # Default knowledge_base/
@@ -182,8 +180,6 @@ Once you're on image v0.6 or later, you can pre-warm the cache before running th
 ./run.sh build-kb --force
 ```
 
-On v0.5 this command does not exist yet — rely on the auto-build that happens during the first scope-stage run.
-
 ### Constraints
 
 - **Max 10 papers** per `references.json` by default — the scope stage hard-fails if more. Raise with `scope_kb_max_papers` (see below). The cap exists because every sub-agent sees the full markdown of every paper.
@@ -192,18 +188,18 @@ On v0.5 this command does not exist yet — rely on the auto-build that happens 
 
 ## Configuration
 
-All paths in the YAML resolve relative to the config file's directory (not the shell's working directory). Required fields must be set explicitly; optional fields fall back to the defaults below.
+Required fields must be set explicitly; optional fields fall back to the defaults below.
 
 ### Required
 
 
 | Field         | Type   | Default | Description                                                                                                                     |
 | ------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `topic`       | string | —       | The research problem in one sentence. Drives every downstream stage.                                                            |
+| `topic`       | string | —       | Describe the research problem. There's no character limit but you may want to limit it to a few paragraphs. This field is critical to the quality of the research agent. Drives every downstream stage.                                                            |
 | `project_id`  | slug   | —       | Groups runs of the same research area. Allowed chars: lowercase letters, digits, `_`, `-`. Must start and end alphanumerically. |
 | `user_id`     | slug   | —       | Identifies who launched the run. Same slug rules. Folder names embed this: `research_runs/<project_id>/<user_id>_<timestamp>/`. |
 | `is_base_run` | bool   | —       | `true` = fresh run; `false` = iterative run (then `base_run_id` + `feedbacks_file` are required).                               |
-| `note`        | string | —       | Free-text note shown in the scope artifact's header. Use `""` if none. Good for tagging a run with a short reminder.            |
+| `note`        | string | —       | Free-text note shown in the scope artifact's header. Use `""` if none. Good for tagging a run with a short reminder. For example, if you're tuning learning rate, you can tag the lr you're trying here.             |
 
 
 ### Iterative run only (omit when `is_base_run: true`)
@@ -211,7 +207,7 @@ All paths in the YAML resolve relative to the config file's directory (not the s
 
 | Field            | Type   | Default | Description                                                                                                                                                                |
 | ---------------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `base_run_id`    | string | —       | Run folder name to refine. Accepted shapes: leaf (`<user>_20260508T132542`), project-qualified (`<project_id>/<leaf>`), or full path (`<output_dir>/<project_id>/<leaf>`). |
+| `base_run_id`    | string | —       | Run folder name to iterate on. Accepted shapes: leaf (`<user>_20260508T132542`), project-qualified (`<project_id>/<leaf>`), or full path (`<output_dir>/<project_id>/<leaf>`). |
 | `feedbacks_file` | path   | —       | Path to a markdown file containing reviewer feedback. Each stage reads its prior artifact + this file to produce a refined version.                                        |
 
 
@@ -260,83 +256,6 @@ All paths in the YAML resolve relative to the config file's directory (not the s
 | `exp_max_retries`        | int  | `3`     | Self-heal attempts before giving up. Each retry costs one LLM patch call plus one subprocess run.                                                                |
 | `exp_codegen_max_tokens` | int  | `32768` | Per-call output cap for codegen + patch (separate from `max_tokens` because experiment code is long and easy to truncate mid-file). Sonnet supports up to 64000. |
 
-
-### Quick-start template
-
-A minimal working config:
-
-```yaml
-topic: "Your research problem in one sentence."
-project_id: "my-project"
-user_id: "yourname"
-is_base_run: true
-note: ""
-```
-
-Everything else has a default. Edit any of the tunables above as needed.
-
-## CLI reference
-
-All commands go through `./run.sh`, which dispatches to the right entrypoint inside the Docker image.
-
-### Available in v0.5
-
-```bash
-./run.sh run --config config.yaml                          # full pipeline
-./run.sh run --config config.yaml --stop-after scope       # one stage only
-./run.sh run --config config.yaml --start-from literature \
-            --resume <user_name>_20260521T143000           # resume on existing run
-./run.sh run --config config.yaml --debug                  # dump every prompt+response to stderr
-
-# Try a different image tag without editing run.sh:
-AUTORESEARCH_VERSION=latest ./run.sh run --config ...
-```
-
-Stage names (for `--stop-after` / `--start-from`): `scope`, `literature`, `experiment`, `summary`.
-
-### Coming in v0.6+
-
-```bash
-# Knowledge base — pre-warm before the pipeline runs:
-./run.sh build-kb                                          # fetch + index references.json
-./run.sh build-kb --force                                  # re-extract everything
-./run.sh build-kb --kb-dir bitcoin_kb                      # use a non-default KB folder
-
-# Web UI:
-./run.sh serve                                             # http://127.0.0.1:8000
-AUTORESEARCH_PORT=8080 ./run.sh serve                      # alternate port
-```
-
-These commands will return `invalid choice` on v0.5 — they require a newer image. Your contact will let you know when to bump `PINNED_VERSION` in `run.sh`.
-
-### Iterative runs
-
-Edit your config to flip into iterative mode:
-
-```yaml
-is_base_run: false
-base_run_id: "<user_name>_20260521T143000"   # the prior run to refine
-feedbacks_file: "./feedbacks.md"             # your free-text feedback
-```
-
-Write a paragraph or two of guidance into `feedbacks.md`, then run normally:
-
-```bash
-./run.sh run --config config.yaml
-```
-
-Each stage reads its prior artifact + your feedback and produces a refined version. The summary stage adds a `### Changes from base run` section listing the deltas.
-
-## Web UI (image v0.6+)
-
-```bash
-./run.sh serve            # ⚠️ requires image v0.6+
-# → http://127.0.0.1:8000
-```
-
-Dashboard lists every project's runs (newest first) and embeds a YAML editor with syntax highlighting for the selected config. Click any run for the live log stream, rendered markdown artifacts (00_summary, 04_memo, etc.), and an **Iterate this run** button that spawns a refinement from a feedback textarea.
-
-Port via `AUTORESEARCH_PORT` (default 8000). One run at a time. **Not available on v0.5** — the image's entrypoint doesn't yet know the `serve` subcommand.
 
 ## Pipeline stages
 
