@@ -57,11 +57,11 @@ The first time you run the pipeline, the scope stage automatically fetches every
 
 You don't need to run any command here; just save `references.json` and proceed.
 
-> **Coming in image v0.6+:** an explicit `./run.sh build-kb` to pre-warm the cache before running the pipeline (faster than letting scope stage do it inline). See "Manual build" under Knowledge Base.
+> You can also run an explicit `./run.sh build-kb` to pre-warm the cache before running the pipeline (faster than letting scope stage do it inline). See "Manual build" under Knowledge Base.
 
 ### Step 3. Edit `config.yaml`
 
-You can use the current `config.yaml` file as your starting point. See "Configuration" section below for the full explanations of each parameter. 
+You can use the current `config.yaml` file as your starting point. See "Configuration" section below for all the parameters you can use and their explanations.  
 
 ```yaml
 # AutoResearch run configuration
@@ -85,12 +85,10 @@ note: ""
 # --- model ---
 model: "claude-opus-4-7"
 
-# --- seed papers (optional)
-# Either a path to a JSON file in knowledge_base/index.json format
-# (recommended — gives both stage_scope context and stage_literature KB matches)
-# OR an inline list of URL strings (lighter — scope context only, no KB match).
-# Omit to run without seeds.
-# seed_papers: "./knowledge_base/index.json"
+# --- knowledge base ---
+references: "./knowledge_base/references.json"
+scope_kb_max_papers: 10
+scope_kb_max_chars_per_paper: 40000
 
 # --- stage 2 tunables (optional; defaults shown) ---
 lit_results_per_query: 5    # raw hits pulled per web_search query before dedupe
@@ -104,9 +102,12 @@ max_tokens: 16384
 exp_codegen_max_tokens: 16384
 exp_timeout_sec: 500
 exp_max_retries: 3
+
 ```
 
 ### Step 4. Run the pipeline
+
+You can choose to run from CLI 
 
 ```bash
 
